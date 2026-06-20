@@ -1,0 +1,33 @@
+# 地形・点群処理
+numpy>=1.24
+scipy>=1.10
+trimesh>=3.20
+open3d>=0.17          # x86のみ: Dockerfile.l4tではsource build
+plyfile>=0.9
+
+# 可視化
+matplotlib>=3.7
+plotly>=5.15
+japanize-matplotlib>=1.1.3
+
+# 地理・ラスター (将来の実地形対応のため保持)
+rasterio>=1.3
+pyproj>=3.4
+
+# Notebook
+jupyterlab>=4.0
+ipykernel
+nbformat>=4.2.0
+
+# ユーティリティ
+pyyaml>=6.0
+requests>=2.31
+tqdm>=4.65
+imageio>=2.31
+Pillow>=9.0
+
+# ノイズ生成 (Blenderなし環境でのプロシージャル地形用)
+noise>=1.2
+
+# 農場境界ポリゴン処理 (ゾーン判定・外向き方位計算)
+shapely>=2.0

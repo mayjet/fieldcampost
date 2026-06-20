@@ -1,0 +1,25 @@
+services:
+  field-campole-optimizer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    runtime: nvidia
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - PYTHONPATH=/workspace
+      - JUPYTER_PORT=${JUPYTER_PORT:-8888}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ../cases:/workspace/cases
+      - ../assets:/workspace/assets
+      - ..:/workspace
+    devices:
+      - /dev/dri:/dev/dri
+    network_mode: host
+    ports:
+      - "${JUPYTER_PORT:-8888}:${JUPYTER_PORT:-8888}"
+    entrypoint: ["/entrypoint.sh"]
+    stdin_open: true
+    tty: true

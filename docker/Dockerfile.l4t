@@ -1,0 +1,84 @@
+FROM nvcr.io/nvidia/l4t-base:r36.2.0
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_DEFAULT_TIMEOUT=300 \
+    PIP_RETRIES=5 \
+    TORCH_CUDA_ARCH_LIST="8.7"
+
+RUN apt-get update && apt-get install -y \
+    python3.11 python3.11-dev python3.11-venv python3-pip \
+    git wget curl build-essential cmake ninja-build \
+    libgl1 libglib2.0-0 libgomp1 \
+    libx11-6 libxrender1 libxi6 libxfixes3 libxxf86vm1 \
+    blender \
+    libgdal-dev gdal-bin \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 \
+    && python3.11 -m pip install --upgrade pip
+
+RUN BPYTHON=$(find /usr/share/blender/ \
+        -name "python3*" -executable -path "*/bin/*" 2>/dev/null | head -1) \
+    && if [ -n "$BPYTHON" ]; then \
+        "$BPYTHON" -m ensurepip --upgrade \
+        && "$BPYTHON" -m pip install --upgrade trimesh numpy; \
+    fi
+
+WORKDIR /workspace
+
+# PyTorch JetPack 6.2
+RUN python3.11 -m pip install --no-cache-dir \
+    --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v62 \
+    torch torchvision \
+    || echo "WARNING: torch from JP6.2 index skipped"
+
+COPY docker/requirements.txt .
+RUN python3.11 -m pip install --no-cache-dir -r requirements.txt
+
+RUN python3.11 -m pip install --no-cache-dir imageio plyfile
+
+# Genesis
+RUN python3.11 -m pip install --no-cache-dir genesis-world \
+    || echo "WARNING: genesis-world skipped"
+
+# open3d: aarch64 source build (non-fatal)
+RUN git clone --depth 1 https://github.com/isl-org/Open3D.git /tmp/open3d \
+    && ( cd /tmp/open3d && mkdir build && cd build \
+         && cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON_MODULE=ON \
+                     -DBUILD_EXAMPLES=OFF -DBUILD_UNIT_TESTS=OFF \
+                     -DBUNDLE_OPEN3D_ML=OFF \
+         && make -j$(nproc) install-pip-package \
+         || echo "WARNING: open3d source build skipped" ) \
+    ; rm -rf /tmp/open3d
+
+# gsplat: aarch64 source build (TORCH_CUDA_ARCH_LIST=8.7 はENVで設定済み)
+RUN git clone --depth 1 https://github.com/nerfstudio-project/gsplat.git /tmp/gsplat \
+    && ( python3.11 -m pip install --no-cache-dir /tmp/gsplat \
+         || echo "WARNING: gsplat build skipped" ) \
+    ; rm -rf /tmp/gsplat
+
+RUN python3.11 -m ipykernel install --sys-prefix \
+    --name py311 --display-name "Python 3.11 (L4T)"
+
+# python コマンドを python3.11 に向ける
+RUN ln -sf /usr/bin/python3.11 /usr/local/bin/python \
+ && ln -sf /usr/bin/python3.11 /usr/local/bin/python3
+
+# PYTHONPATH: /workspace を常にモジュール検索パスに含める
+ENV PYTHONPATH="/workspace:${PYTHONPATH}"
+
+# Jupyter の作業ディレクトリを /workspace に固定
+RUN mkdir -p /root/.jupyter && \
+    echo "c.ServerApp.root_dir = '/workspace'" >> /root/.jupyter/jupyter_lab_config.py && \
+    echo "c.ServerApp.ip = '0.0.0.0'" >> /root/.jupyter/jupyter_lab_config.py && \
+    echo "c.ServerApp.port = 8888" >> /root/.jupyter/jupyter_lab_config.py && \
+    echo "c.ServerApp.open_browser = False" >> /root/.jupyter/jupyter_lab_config.py && \
+    echo "c.ServerApp.allow_root = True" >> /root/.jupyter/jupyter_lab_config.py && \
+    echo "c.ServerApp.token = ''" >> /root/.jupyter/jupyter_lab_config.py && \
+    echo "c.ServerApp.password = ''" >> /root/.jupyter/jupyter_lab_config.py
+
+COPY . .
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
