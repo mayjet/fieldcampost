@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     python3 python3-dev python3-venv python3-pip \
     git wget curl build-essential cmake ninja-build \
     libgl1-mesa-glx libglib2.0-0 libgomp1 \
+    libegl1 libgles2 libopengl0 libglvnd0 \
     libx11-6 libxext6 libxrender1 libxi6 libxfixes3 libxxf86vm1 \
     libgdal-dev gdal-bin \
     && rm -rf /var/lib/apt/lists/*
