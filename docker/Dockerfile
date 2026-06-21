@@ -6,8 +6,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0"
 
 # ── System packages ───────────────────────────────────────────────────────────
+# Ubuntu 22.04 の標準 python3 (3.10) を使用。3.11 は apt の dist-packages
+# （numpy 等）と ABI が合わず ImportError を起こすため避ける。
 RUN apt-get update && apt-get install -y \
-    python3.11 python3.11-dev python3.11-venv python3-pip \
+    python3 python3-dev python3-venv python3-pip \
     git wget curl build-essential cmake ninja-build \
     libgl1-mesa-glx libglib2.0-0 libgomp1 \
     libx11-6 libxext6 libxrender1 libxi6 libxfixes3 libxxf86vm1 \
@@ -15,6 +17,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install uv
+
+# python コマンドを python3 に向ける
+RUN ln -sf /usr/bin/python3 /usr/local/bin/python
 
 # ── Blender 4.1 (headless) ────────────────────────────────────────────────────
 ARG BLENDER_VERSION=4.1.1
@@ -60,15 +65,12 @@ RUN uv pip install --system --no-cache genesis-world \
 # I/O
 RUN uv pip install --system --no-cache imageio plyfile
 
-# python コマンドを python3 に向ける
-RUN ln -sf /usr/bin/python3 /usr/local/bin/python
-
 # PYTHONPATH: /workspace を常にモジュール検索パスに含める
 ENV PYTHONPATH="/workspace:${PYTHONPATH}"
 
 # Jupyter
 RUN python3 -m ipykernel install --sys-prefix \
-    --name py311 --display-name "Python 3.11 (x86)"
+    --name py310 --display-name "Python 3.10 (x86)"
 
 # Jupyter Lab 設定 (root_dir・認証なし・自動起動向け)
 RUN mkdir -p /root/.jupyter && \

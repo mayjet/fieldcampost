@@ -24,6 +24,7 @@ docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
 docker run -d \
     --name "$CONTAINER_NAME" \
     --gpus all \
+    --shm-size=8g \
     -e DISPLAY="${DISPLAY:-:0}" \
     -e XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}" \
     -e NVIDIA_VISIBLE_DEVICES=all \

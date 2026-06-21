@@ -2,6 +2,7 @@
 numpy>=1.24
 scipy>=1.10
 trimesh>=3.20
+embreex>=2.18         # trimesh の高速レイキャスト (camera_optimizer の焼きなましで必須)
 open3d>=0.17          # x86のみ: Dockerfile.l4tではsource build
 plyfile>=0.9
 
