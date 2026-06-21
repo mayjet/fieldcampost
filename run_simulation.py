@@ -22,8 +22,8 @@ def main():
     poses_json = case_dir / "camera_poses.json"
     terrain_ply = case_dir / "terrain.ply"
     tree_glb    = Path("assets/tree.glb")
-    images_dir  = case_dir / "images"
     colmap_dir  = case_dir / "colmap_input"
+    images_dir  = colmap_dir / "images"  # gsplat は --data_dir 直下に images/ を要求
     model_dir   = case_dir / "gaussian_model"
     recon_ply   = case_dir / "recon.ply"
     gt_ply      = case_dir / "terrain_gt.ply"
