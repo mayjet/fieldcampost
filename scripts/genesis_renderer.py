@@ -53,8 +53,13 @@ class GenesisRenderer:
             out_path = self.output_dir / f"cam_{cam_id:04d}.png"
             if out_path.exists():
                 continue
-            rgb = gs_cam.render(rgb=True)["rgb"]
-            imageio.imwrite(str(out_path), (rgb * 255).astype("uint8"))
+            rgb, *_ = gs_cam.render(rgb=True)  # Genesis 1.1.2: タプル (rgb, depth, seg, normal) を返す
+            rgb = np.asarray(rgb)
+            if np.issubdtype(rgb.dtype, np.floating):
+                rgb = (rgb * 255).astype("uint8")
+            else:
+                rgb = rgb.astype("uint8")
+            imageio.imwrite(str(out_path), rgb)
             rendered += 1
             if rendered % 10 == 0:
                 print(f"  {rendered}/{total} rendered")
