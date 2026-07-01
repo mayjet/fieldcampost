@@ -67,6 +67,19 @@ python generate_case.py \
 
 出力: `cases/ranch_01/terrain.ply`, `farm_boundary.json`, `scene_preview.png`
 
+### 地形の閲覧 (インタラクティブビューア)
+
+生成した地形をマウスで視点操作しながら確認できる。
+
+```bash
+python view_terrain.py --case ranch_01
+```
+
+- マウスドラッグで視点回転、スクロールでズーム。ウィンドウを閉じるかCtrl+Cで終了。
+- `--device` でGenesisのバックエンドを指定できる (`auto` / `cuda` / `metal` / `cpu` / `amdgpu` / `gpu`)。
+  デフォルトは `auto` で、CUDA (Linux/Jetson) → Metal (Apple Silicon) → CPU の順に自動選択されるため、
+  Mac・GPU無し環境・NVIDIA GPU環境のいずれでも同じコマンドで動く。
+
 ### 2. Notebook 実行 (カメラ配置最適化)
 
 ```bash
@@ -81,6 +94,8 @@ Cell 1〜10 を順に実行し、`camera_poses.json` / `terrain_gt.ply` / COLMAP
 ```bash
 python run_simulation.py --case ranch_01 --auto-improve
 ```
+
+`--device` でGenesisバックエンドを指定できる (デフォルト `auto`。詳細は上記「地形の閲覧」参照)。
 
 出力: `evaluation_results.json` (chamfer_distance_cm, dsm_rmse_cm, fscore_10cm), `error_map.png`
 
