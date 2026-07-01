@@ -7,6 +7,17 @@ import numpy as np
 from pathlib import Path
 
 
+def ply_to_obj(ply_path: str) -> Path:
+    """PLY → OBJ 変換 (Genesis はOBJが安定なため)。既に変換済みならキャッシュを再利用する。"""
+    ply_path = Path(ply_path)
+    obj_path = ply_path.with_suffix(".obj")
+    if obj_path.exists():
+        return obj_path
+    mesh = trimesh.load(str(ply_path), force='mesh')
+    mesh.export(str(obj_path))
+    return obj_path
+
+
 def load_terrain_as_mesh(ply_path: str) -> tuple[trimesh.Trimesh, dict]:
     """
     PLYファイルを読み込みtrimesh.Trimeshとして返す。

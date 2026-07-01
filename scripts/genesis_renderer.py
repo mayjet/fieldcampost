@@ -7,24 +7,40 @@ import json, math, imageio
 import numpy as np
 from pathlib import Path
 
+from scripts.terrain_loader import ply_to_obj
+
+BACKENDS = ("auto", "gpu", "cuda", "metal", "amdgpu", "cpu")
+
+
+def resolve_backend(device: str = "auto"):
+    """device名 → Genesisバックエンド定数。'auto'/'gpu' はGenesis自身に
+    cuda→amdgpu→metal→cpu の順で自動選択させる (backend=None と等価)。"""
+    device = (device or "auto").lower()
+    if device not in BACKENDS:
+        raise ValueError(f"Unknown Genesis backend '{device}'. Choose from: {', '.join(BACKENDS)}")
+    if device in ("auto", "gpu"):
+        return None
+    return getattr(gs, device)
+
 
 class GenesisRenderer:
     def __init__(self, terrain_ply, tree_glb, poses_json, output_dir,
-                 image_w=1920, image_h=1080):
+                 image_w=1920, image_h=1080, device="auto"):
         self.terrain_ply = Path(terrain_ply)
         self.tree_glb    = Path(tree_glb) if tree_glb else None
         self.poses_json  = Path(poses_json)
         self.output_dir  = Path(output_dir)
         self.image_w     = image_w
         self.image_h     = image_h
+        self.device      = device
 
     def render_all(self):
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        gs.init(backend=gs.cuda)
+        gs.init(backend=resolve_backend(self.device))
         scene = gs.Scene(show_viewer=False)
 
-        terrain_obj = self._ply_to_obj(self.terrain_ply)
+        terrain_obj = ply_to_obj(self.terrain_ply)
         scene.add_entity(gs.morphs.Mesh(file=str(terrain_obj), fixed=True))
 
         if self.tree_glb and self.tree_glb.exists():
@@ -61,16 +77,6 @@ class GenesisRenderer:
 
         print(f"Rendering done: {rendered} new images → {self.output_dir}/")
 
-    def _ply_to_obj(self, ply_path: Path) -> Path:
-        """PLY → OBJ 変換 (Genesis はOBJが安定)"""
-        import trimesh
-        obj_path = ply_path.with_suffix(".obj")
-        if obj_path.exists():
-            return obj_path
-        mesh = trimesh.load(str(ply_path), force='mesh')
-        mesh.export(str(obj_path))
-        return obj_path
-
     def _place_trees(self, scene, n_trees: int = 2000, seed: int = 42):
         """
         tree.glb を地形全体にランダム大量配置する (森林想定)。
@@ -78,7 +84,7 @@ class GenesisRenderer:
         """
         import trimesh
         rng   = np.random.default_rng(seed)
-        mesh  = trimesh.load(str(self._ply_to_obj(self.terrain_ply)), force='mesh')
+        mesh  = trimesh.load(str(ply_to_obj(self.terrain_ply)), force='mesh')
         verts = np.array(mesh.vertices)
 
         indices = rng.integers(0, len(verts), size=n_trees)

@@ -16,6 +16,9 @@ def main():
     parser.add_argument("--skip-train",   action="store_true")
     parser.add_argument("--auto-improve", action="store_true")
     parser.add_argument("--max-loops",    type=int, default=3)
+    parser.add_argument("--device",       default="auto",
+                         choices=("auto", "gpu", "cuda", "metal", "amdgpu", "cpu"),
+                         help="Genesisバックエンド (auto=CUDA/Metal/CPUを自動選択)")
     args = parser.parse_args()
 
     case_dir  = Path("cases") / args.case
@@ -41,6 +44,7 @@ def main():
                 tree_glb=tree_glb if tree_glb.exists() else None,
                 poses_json=poses_json,
                 output_dir=images_dir,
+                device=args.device,
             )
             renderer.render_all()
 
