@@ -8,6 +8,7 @@ import numpy as np
 from pathlib import Path
 
 from scripts.terrain_loader import ply_to_obj
+from scripts.scene_populate import load_farm_boundary, sample_tree_positions, place_tree_entities
 
 BACKENDS = ("auto", "gpu", "cuda", "metal", "amdgpu", "cpu")
 
@@ -57,7 +58,8 @@ class GenesisRenderer:
             fov_v = 2 * math.degrees(math.atan(intr["cy"] / intr["fy"]))
             gs_cam = scene.add_camera(
                 res=(self.image_w, self.image_h),
-                pos=pos, fov=fov_v,
+                pos=pos, lookat=cam["lookat_enu"], up=(0, 0, 1),
+                fov=fov_v,
             )
             cameras.append((cam["id"], gs_cam))
 
@@ -79,28 +81,20 @@ class GenesisRenderer:
 
     def _place_trees(self, scene, n_trees: int = 2000, seed: int = 42):
         """
-        tree.glb を地形全体にランダム大量配置する (森林想定)。
-        配置制限は一切なし — 地形頂点からランダムサンプリングして均一に散布する。
+        tree.glb を大量配置する。farm_boundary.json があれば forests(森林パッチ)
+        内に限定して配置し、無ければ従来どおり地形全体からランダムに配置する
+        (後方互換)。
         """
         import trimesh
-        rng   = np.random.default_rng(seed)
         mesh  = trimesh.load(str(ply_to_obj(self.terrain_ply)), force='mesh')
         verts = np.array(mesh.vertices)
 
-        indices = rng.integers(0, len(verts), size=n_trees)
-        print(f"  木を配置中: {n_trees} 本 (地形全体ランダム)...")
+        farm    = load_farm_boundary(self.terrain_ply.parent / "farm_boundary.json")
+        forests = farm.get("forests") if farm else None
 
-        for i, idx in enumerate(indices):
-            v     = verts[idx]
-            pos   = [float(v[0]), float(v[1]), float(v[2]) + 0.2]
-            scale = float(rng.uniform(0.6, 3.0))
-            scene.add_entity(
-                gs.morphs.Mesh(
-                    file=str(self.tree_glb),
-                    fixed=True,
-                    pos=pos,
-                    scale=scale,
-                ),
-            )
-            if (i + 1) % 500 == 0:
-                print(f"    {i+1}/{n_trees} 本配置済み")
+        positions = sample_tree_positions(verts, forests, n_trees=n_trees, seed=seed)
+        rng = np.random.default_rng(seed)
+        print(f"  木を配置中: {len(positions)} 本 "
+              f"({'森林パッチ限定' if forests else '地形全体ランダム'})...")
+        n = place_tree_entities(scene, self.tree_glb, positions, rng, use_proxy=False)
+        print(f"    {n} 本配置済み")

@@ -69,6 +69,20 @@ def load_terrain_as_mesh(ply_path: str) -> tuple[trimesh.Trimesh, dict]:
     return mesh, info
 
 
+def ground_z_at(verts: np.ndarray, xy, radius: float = 10.0) -> float:
+    """
+    (x, y) 直下の地形標高を推定する。半径 radius [m] 以内の地形頂点zの平均を取る
+    (camera_optimizer.TerrainAnalyzer.effective_pole_height と同じ近傍平均パターン)。
+    近傍に頂点が無ければ最近傍1点のzにフォールバックする。
+    """
+    xy = np.asarray(xy, dtype=float)
+    dists = np.linalg.norm(verts[:, :2] - xy, axis=1)
+    nearby = dists < radius
+    if nearby.sum() >= 1:
+        return float(verts[nearby, 2].mean())
+    return float(verts[np.argmin(dists), 2])
+
+
 def mesh_to_pointcloud(mesh: trimesh.Trimesh, n_points: int = 1_000_000,
                         return_numpy: bool = False):
     """
